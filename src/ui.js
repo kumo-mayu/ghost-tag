@@ -1,5 +1,8 @@
+import { MapView } from './mapView.js';
+
 let els = {};
 let callbacks = {};
+let mapView = null;
 
 export function init(cb) {
   callbacks = cb;
@@ -10,6 +13,10 @@ export function init(cb) {
   els.restartBtn = document.getElementById('restart-btn');
   els.debugToggle = document.getElementById('debug-toggle');
   els.debugPanel = document.getElementById('debug-panel');
+  els.debugText = document.getElementById('debug-text');
+  els.mapMode = document.getElementById('map-mode');
+  els.mapError = document.getElementById('map-error');
+  els.mapContainer = document.getElementById('map-container');
   els.runningTimer = document.getElementById('running-timer');
   els.gpsAccuracy = document.getElementById('gps-accuracy');
   els.areaWarning = document.getElementById('area-warning');
@@ -23,6 +30,8 @@ export function init(cb) {
     ended: document.getElementById('screen-ended'),
   };
 
+  mapView = new MapView(els.mapContainer);
+
   els.setupForm.addEventListener('submit', (e) => {
     e.preventDefault();
     hideError();
@@ -31,6 +40,16 @@ export function init(cb) {
   els.stopBtn.addEventListener('click', () => callbacks.onStop());
   els.restartBtn.addEventListener('click', () => callbacks.onRestart());
   els.debugToggle.addEventListener('click', toggleDebug);
+  els.mapMode.addEventListener('change', async () => {
+    els.mapError.setAttribute('hidden', '');
+    try {
+      await mapView.setMode(els.mapMode.value);
+    } catch (err) {
+      els.mapMode.value = 'off';
+      els.mapError.textContent = err.message;
+      els.mapError.removeAttribute('hidden');
+    }
+  });
 }
 
 function readConfig() {
@@ -55,6 +74,7 @@ function toggleDebug() {
   if (hidden) {
     els.debugPanel.removeAttribute('hidden');
     els.debugToggle.textContent = 'デバッグ情報を隠す';
+    mapView.refreshSize();
   } else {
     els.debugPanel.setAttribute('hidden', '');
     els.debugToggle.textContent = 'デバッグ情報を表示';
@@ -105,15 +125,16 @@ export function updateRunning({ elapsedSec, accuracy, gpsLost, outOfArea }) {
   else clearGpsWarning();
 }
 
-export function updateDebug({ player, oni, distance, distFromStart, oniSpeed }) {
+export function updateDebug({ player, oni, distance, distFromStart, oniSpeed, startPoint, playAreaRadius, captureDistance }) {
   if (els.debugPanel.hasAttribute('hidden')) return;
-  els.debugPanel.textContent = [
+  els.debugText.textContent = [
     `player: ${player.lat.toFixed(6)}, ${player.lon.toFixed(6)} (±${player.accuracy?.toFixed(1) ?? '?'}m)`,
     `oni:    ${oni.lat.toFixed(6)}, ${oni.lon.toFixed(6)}`,
     `distance to oni: ${distance.toFixed(1)} m`,
     `distance from start: ${distFromStart.toFixed(1)} m`,
     `oni speed: ${oniSpeed} m/s`,
   ].join('\n');
+  mapView.update({ player, oni, startPoint, playAreaRadius, captureDistance });
 }
 
 export function showEnded({ reason, elapsedSec, message }) {

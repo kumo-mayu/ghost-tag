@@ -73,7 +73,18 @@
   <button id="stop-btn" class="big-button stop">STOP</button>
 
   <button id="debug-toggle" class="link-button" type="button">デバッグ情報を表示</button>
-  <pre id="debug-panel" hidden></pre>
+  <div id="debug-panel" hidden>
+    <pre id="debug-text"></pre>
+    <label class="map-mode-label">地図表示
+      <select id="map-mode">
+        <option value="off">オフ</option>
+        <option value="simple">シンプル（相対位置）</option>
+        <option value="osm">地図タイル（OpenStreetMap）</option>
+      </select>
+    </label>
+    <p id="map-error" class="error" hidden></p>
+    <div id="map-container" hidden></div>
+  </div>
 </div>
 
 <div id="screen-ended" class="screen" hidden>

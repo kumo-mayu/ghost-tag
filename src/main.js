@@ -135,6 +135,9 @@ function updateRunningUI() {
     distance: dist,
     distFromStart,
     oniSpeed: config.oniSpeed,
+    startPoint,
+    playAreaRadius: config.playAreaRadius,
+    captureDistance: config.captureDistance,
   });
 }
 
