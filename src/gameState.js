@@ -31,5 +31,15 @@ export function defaultConfig() {
     // a phone's built-in speaker(s) won't convey stereo separation.
     enableStereoPan: false,
     headingMinMoveM: 5,
+    // Speaker-safe direction cues (no headphones needed): pulse count in
+    // each beep burst = coarse sector relative to travel direction
+    // (1=front, 2=right, 3=behind, 4=left); a lowpass filter brightens
+    // as the player's heading aligns with the oni and dulls as it drifts
+    // away — modeled after how Microsoft Soundscape's beacon clears up
+    // when you face it.
+    enableDirectionalCues: true,
+    directionPulseGapMs: 80,
+    directionMinFilterHz: 700,
+    directionMaxFilterHz: 6000,
   };
 }

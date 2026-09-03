@@ -35,8 +35,12 @@
       エリア外に出たら即ゲームオーバー（未チェック時は警告のみ）
     </label>
     <label class="checkbox">
+      <input type="checkbox" name="enableDirectionalCues" checked>
+      方向手がかり（パルス数＋音色）を使う（スピーカーでも機能）
+    </label>
+    <label class="checkbox">
       <input type="checkbox" name="enableStereoPan">
-      方向定位を試す（実験的・要イヤホン／スピーカーでは効果なし）
+      左右ステレオ定位も試す（実験的・要イヤホン／スピーカーでは効果なし）
     </label>
 
     <details>
@@ -58,6 +62,15 @@
       </label>
       <label>方向推定に必要な最小移動距離 (m)
         <input type="number" name="headingMinMoveM" value="5" min="1" step="1">
+      </label>
+      <label>方向パルスの間隔 (ms)
+        <input type="number" name="directionPulseGapMs" value="80" min="30" step="10">
+      </label>
+      <label>方向フィルター: こもった音の下限 (Hz)
+        <input type="number" name="directionMinFilterHz" value="700" min="200" step="100">
+      </label>
+      <label>方向フィルター: 明瞭な音の上限 (Hz)
+        <input type="number" name="directionMaxFilterHz" value="6000" min="1000" step="100">
       </label>
     </details>
 

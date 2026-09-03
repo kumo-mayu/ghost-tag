@@ -99,6 +99,7 @@ async function startGame(formConfig) {
     captureDistance: config.captureDistance,
     getDistance: () => distanceMeters(player.lat, player.lon, oni.lat, oni.lon),
     getPan: config.enableStereoPan ? computePan : undefined,
+    getDirection: config.enableDirectionalCues ? computeDirectionCue : undefined,
   });
 
   ui.showScreen('running');
@@ -114,6 +115,27 @@ function computePan() {
   const oniBearing = bearingDegrees(player.lat, player.lon, oni.lat, oni.lon);
   const relative = ((oniBearing - playerHeading + 540) % 360) - 180; // -180..180
   return Math.sin((relative * Math.PI) / 180);
+}
+
+// Speaker-safe direction cue: coarse sector (1=front,2=right,3=behind,
+// 4=left) via pulse count + a lowpass filter that brightens the closer
+// the player's heading is to actually facing the oni. Returns null while
+// heading is unknown (player hasn't moved enough yet).
+function computeDirectionCue() {
+  if (playerHeading == null) return null;
+  const oniBearing = bearingDegrees(player.lat, player.lon, oni.lat, oni.lon);
+  const relative = ((oniBearing - playerHeading + 540) % 360) - 180; // -180..180
+  const abs = Math.abs(relative);
+
+  let pulseCount;
+  if (abs <= 45) pulseCount = 1; // front
+  else if (abs >= 135) pulseCount = 3; // behind
+  else pulseCount = relative > 0 ? 2 : 4; // right : left
+
+  const clarity = 1 - abs / 180; // 0 (directly behind) .. 1 (dead ahead)
+  const filterHz = config.directionMinFilterHz + clarity * (config.directionMaxFilterHz - config.directionMinFilterHz);
+
+  return { pulseCount, filterHz, pulseGapMs: config.directionPulseGapMs };
 }
 
 function checkCapture() {

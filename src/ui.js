@@ -65,12 +65,16 @@ function readConfig() {
     enableHighAccuracy: fd.get('enableHighAccuracy') === 'on',
     areaExitGameOver: fd.get('areaExitGameOver') === 'on',
     enableStereoPan: fd.get('enableStereoPan') === 'on',
+    enableDirectionalCues: fd.get('enableDirectionalCues') === 'on',
     oniTickMs: Number(fd.get('oniTickMs')),
     gpsLostTimeoutMs: Number(fd.get('gpsLostTimeoutMs')),
     audioMinIntervalMs: Number(fd.get('audioMinIntervalMs')),
     audioMaxIntervalMs: Number(fd.get('audioMaxIntervalMs')),
     audioFarDistance: Number(fd.get('audioFarDistance')),
     headingMinMoveM: Number(fd.get('headingMinMoveM')),
+    directionPulseGapMs: Number(fd.get('directionPulseGapMs')),
+    directionMinFilterHz: Number(fd.get('directionMinFilterHz')),
+    directionMaxFilterHz: Number(fd.get('directionMaxFilterHz')),
   };
 }
 
