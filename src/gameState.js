@@ -49,5 +49,8 @@ export function defaultConfig() {
     // computed from movement) always wins while actually moving.
     enableCompassFallback: true,
     compassSmoothing: 0.15, // EMA weight per sample; higher = less smoothing
+    // Safety: warn when GPS accuracy is too poor to trust distance/area
+    // judgments at this game's scale (CLAUDE.md 安全面).
+    poorAccuracyThresholdM: 30,
   };
 }

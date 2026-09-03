@@ -50,6 +50,14 @@ form { display: flex; flex-direction: column; gap: 12px; }
   margin: -6px 0 0;
 }
 
+.log-section {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  margin-top: 4px;
+}
+.log-buttons { display: flex; gap: 16px; }
+.log-buttons .link-button { padding: 4px 0; }
+
 label {
   display: flex;
   flex-direction: column;

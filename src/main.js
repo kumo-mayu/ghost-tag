@@ -4,6 +4,7 @@ import { AudioEngine } from './audio.js';
 import { distanceMeters, bearingDegrees, destinationPoint, randomBearing } from './geo.js';
 import { GameStatus, EndReason } from './gameState.js';
 import * as ui from './ui.js';
+import * as logger from './logger.js';
 
 let status = GameStatus.READY;
 let config = null;
@@ -33,7 +34,14 @@ ui.init({
     status = GameStatus.READY;
     ui.showScreen('setup');
   },
+  onDownloadLog: () => logger.downloadLog(),
+  onClearLog: () => {
+    logger.clearLog();
+    ui.setLogCount(logger.getSessionCount());
+  },
 });
+
+ui.setLogCount(logger.getSessionCount());
 
 async function startGame(formConfig) {
   if (status === GameStatus.RUNNING) return;
@@ -75,13 +83,32 @@ async function startGame(formConfig) {
   playerHeading = null;
   headingSource = null;
 
+  logger.startSession(config);
+
   gps.start(
     (newFix) => {
       const prevPlayer = player;
       player = { lat: newFix.lat, lon: newFix.lon, accuracy: newFix.accuracy };
       updatePlayerHeading(prevPlayer, newFix);
+
+      const dir = config.enableDirectionalCues ? computeDirectionCue() : null;
+      logger.logGpsFix({
+        t: Math.round(performance.now() - startedAt),
+        lat: newFix.lat,
+        lon: newFix.lon,
+        accuracy: newFix.accuracy,
+        oniLat: oni.lat,
+        oniLon: oni.lon,
+        distance: Math.round(distanceMeters(newFix.lat, newFix.lon, oni.lat, oni.lon)),
+        playerHeading,
+        headingSource,
+        pulseCount: dir ? dir.pulseCount : null,
+      });
     },
-    (err) => ui.setGpsWarning('⚠ ' + err.message)
+    (err) => {
+      ui.setGpsWarning('⚠ ' + err.message);
+      logger.logEvent('gpsError', { t: Math.round(performance.now() - startedAt), message: err.message });
+    }
   );
 
   requestWakeLock();
@@ -244,6 +271,11 @@ function updateRunningUI() {
   const wasOutOfArea = outOfArea;
   outOfArea = distFromStart > config.playAreaRadius;
   const now = performance.now();
+  if (outOfArea && !wasOutOfArea) {
+    logger.logEvent('areaExit', { t: Math.round(now - startedAt) });
+  } else if (!outOfArea && wasOutOfArea) {
+    logger.logEvent('areaEnter', { t: Math.round(now - startedAt) });
+  }
   if (outOfArea && (!wasOutOfArea || now - lastAreaWarnAt > 3000)) {
     audio.playWarningTone();
     lastAreaWarnAt = now;
@@ -253,8 +285,11 @@ function updateRunningUI() {
     }
   }
 
+  const poorAccuracy = player.accuracy != null && player.accuracy > config.poorAccuracyThresholdM;
+
   ui.updateRunning({
     elapsedSec: Math.floor((now - startedAt) / 1000),
+    poorAccuracy,
     accuracy: player.accuracy,
     gpsLost: gps.isLost(),
     outOfArea,
@@ -289,6 +324,10 @@ function endGame(reason, message) {
   if (reason === EndReason.CAPTURED) audio.playCaptureSound();
 
   const elapsedSec = Math.floor((performance.now() - startedAt) / 1000);
+  const finalDistance = player && oni ? Math.round(distanceMeters(player.lat, player.lon, oni.lat, oni.lon)) : null;
+  logger.endSession({ reason, elapsedSec, finalDistance });
+  ui.setLogCount(logger.getSessionCount());
+
   ui.showEnded({ reason, elapsedSec, message });
 }
 

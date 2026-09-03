@@ -80,11 +80,22 @@
       <label>コンパス平滑化係数（大きいほど反応早いが揺れに弱い）
         <input type="number" name="compassSmoothing" value="0.15" min="0.01" max="1" step="0.01">
       </label>
+      <label>GPS精度が低いとみなす閾値 (m)
+        <input type="number" name="poorAccuracyThresholdM" value="30" min="5" step="5">
+      </label>
     </details>
 
     <button type="submit" id="start-btn" class="big-button">START</button>
   </form>
   <p id="setup-error" class="error" hidden></p>
+
+  <div class="log-section">
+    <p class="hint">セッションログ（GPS・方向データ。端末内のみ保存、外部送信なし）: <span id="log-count">0</span>件</p>
+    <div class="log-buttons">
+      <button id="log-download-btn" type="button" class="link-button">ダウンロード</button>
+      <button id="log-clear-btn" type="button" class="link-button">削除</button>
+    </div>
+  </div>
 </div>
 
 <div id="screen-running" class="screen" hidden>
@@ -95,6 +106,7 @@
 
   <div id="area-warning" class="banner warning" hidden>⚠ プレイエリア外です</div>
   <div id="gps-warning" class="banner warning" hidden>⚠ GPS信号ロスト</div>
+  <div id="accuracy-warning" class="banner warning" hidden>⚠ GPS精度が低下しています</div>
 
   <div class="gps-info">GPS精度: <span id="gps-accuracy">--</span> m</div>
 

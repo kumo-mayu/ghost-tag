@@ -21,9 +21,13 @@ export function init(cb) {
   els.gpsAccuracy = document.getElementById('gps-accuracy');
   els.areaWarning = document.getElementById('area-warning');
   els.gpsWarning = document.getElementById('gps-warning');
+  els.accuracyWarning = document.getElementById('accuracy-warning');
   els.endedTitle = document.getElementById('ended-title');
   els.endedMessage = document.getElementById('ended-message');
   els.endedTime = document.getElementById('ended-time');
+  els.logCount = document.getElementById('log-count');
+  els.logDownloadBtn = document.getElementById('log-download-btn');
+  els.logClearBtn = document.getElementById('log-clear-btn');
   els.screens = {
     setup: document.getElementById('screen-setup'),
     running: document.getElementById('screen-running'),
@@ -40,6 +44,8 @@ export function init(cb) {
   els.stopBtn.addEventListener('click', () => callbacks.onStop());
   els.restartBtn.addEventListener('click', () => callbacks.onRestart());
   els.debugToggle.addEventListener('click', toggleDebug);
+  els.logDownloadBtn.addEventListener('click', () => callbacks.onDownloadLog());
+  els.logClearBtn.addEventListener('click', () => callbacks.onClearLog());
   els.mapMode.addEventListener('change', async () => {
     els.mapError.setAttribute('hidden', '');
     try {
@@ -77,7 +83,12 @@ function readConfig() {
     directionMinFilterHz: Number(fd.get('directionMinFilterHz')),
     directionMaxFilterHz: Number(fd.get('directionMaxFilterHz')),
     compassSmoothing: Number(fd.get('compassSmoothing')),
+    poorAccuracyThresholdM: Number(fd.get('poorAccuracyThresholdM')),
   };
+}
+
+export function setLogCount(n) {
+  els.logCount.textContent = String(n);
 }
 
 function toggleDebug() {
@@ -125,12 +136,15 @@ function formatTime(sec) {
   return `${m}:${s}`;
 }
 
-export function updateRunning({ elapsedSec, accuracy, gpsLost, outOfArea }) {
+export function updateRunning({ elapsedSec, accuracy, gpsLost, outOfArea, poorAccuracy }) {
   els.runningTimer.textContent = formatTime(elapsedSec);
   els.gpsAccuracy.textContent = accuracy != null ? accuracy.toFixed(1) : '--';
 
   if (outOfArea) els.areaWarning.removeAttribute('hidden');
   else els.areaWarning.setAttribute('hidden', '');
+
+  if (poorAccuracy) els.accuracyWarning.removeAttribute('hidden');
+  else els.accuracyWarning.setAttribute('hidden', '');
 
   if (gpsLost) setGpsWarning('⚠ GPS信号ロスト');
   else clearGpsWarning();
