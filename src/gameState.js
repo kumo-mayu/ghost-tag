@@ -41,5 +41,13 @@ export function defaultConfig() {
     directionPulseGapMs: 80,
     directionMinFilterHz: 700,
     directionMaxFilterHz: 6000,
+    // Fallback heading source for when GPS can't tell us a direction of
+    // travel (player stationary, or movement too small vs. GPS noise):
+    // the device compass (DeviceOrientation), smoothed since a phone held
+    // or armband-mounted by a running person swings/bounces constantly.
+    // Only used as a last resort — GPS-derived heading (native or
+    // computed from movement) always wins while actually moving.
+    enableCompassFallback: true,
+    compassSmoothing: 0.15, // EMA weight per sample; higher = less smoothing
   };
 }

@@ -38,9 +38,14 @@
       <input type="checkbox" name="enableDirectionalCues" checked>
       方向手がかり（パルス数＋音色）を使う（スピーカーでも機能）
     </label>
+    <p class="hint">パルス回数: 1回=前方 / 2回=右 / 3回=後方 / 4回=左（進行方向が基準）。音が明瞭なほど正対、こもるほど外れている。</p>
     <label class="checkbox">
       <input type="checkbox" name="enableStereoPan">
       左右ステレオ定位も試す（実験的・要イヤホン／スピーカーでは効果なし）
+    </label>
+    <label class="checkbox">
+      <input type="checkbox" name="enableCompassFallback" checked>
+      静止中はコンパスで方向を補う（GPSで進行方向が分からない時のみ使用）
     </label>
 
     <details>
@@ -72,6 +77,9 @@
       <label>方向フィルター: 明瞭な音の上限 (Hz)
         <input type="number" name="directionMaxFilterHz" value="6000" min="1000" step="100">
       </label>
+      <label>コンパス平滑化係数（大きいほど反応早いが揺れに弱い）
+        <input type="number" name="compassSmoothing" value="0.15" min="0.01" max="1" step="0.01">
+      </label>
     </details>
 
     <button type="submit" id="start-btn" class="big-button">START</button>
@@ -94,6 +102,7 @@
 
   <button id="debug-toggle" class="link-button" type="button">デバッグ情報を表示</button>
   <div id="debug-panel" hidden>
+    <p class="hint">パルス: 1=前方 / 2=右 / 3=後方 / 4=左（明瞭=正対、こもる=外れ）</p>
     <pre id="debug-text"></pre>
     <label class="map-mode-label">地図表示
       <select id="map-mode">

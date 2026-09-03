@@ -66,6 +66,7 @@ function readConfig() {
     areaExitGameOver: fd.get('areaExitGameOver') === 'on',
     enableStereoPan: fd.get('enableStereoPan') === 'on',
     enableDirectionalCues: fd.get('enableDirectionalCues') === 'on',
+    enableCompassFallback: fd.get('enableCompassFallback') === 'on',
     oniTickMs: Number(fd.get('oniTickMs')),
     gpsLostTimeoutMs: Number(fd.get('gpsLostTimeoutMs')),
     audioMinIntervalMs: Number(fd.get('audioMinIntervalMs')),
@@ -75,6 +76,7 @@ function readConfig() {
     directionPulseGapMs: Number(fd.get('directionPulseGapMs')),
     directionMinFilterHz: Number(fd.get('directionMinFilterHz')),
     directionMaxFilterHz: Number(fd.get('directionMaxFilterHz')),
+    compassSmoothing: Number(fd.get('compassSmoothing')),
   };
 }
 
@@ -134,7 +136,7 @@ export function updateRunning({ elapsedSec, accuracy, gpsLost, outOfArea }) {
   else clearGpsWarning();
 }
 
-export function updateDebug({ player, oni, distance, distFromStart, oniSpeed, startPoint, playAreaRadius, captureDistance }) {
+export function updateDebug({ player, oni, distance, distFromStart, oniSpeed, startPoint, playAreaRadius, captureDistance, playerHeading, headingSource, direction }) {
   if (els.debugPanel.hasAttribute('hidden')) return;
   els.debugText.textContent = [
     `player: ${player.lat.toFixed(6)}, ${player.lon.toFixed(6)} (±${player.accuracy?.toFixed(1) ?? '?'}m)`,
@@ -142,6 +144,8 @@ export function updateDebug({ player, oni, distance, distFromStart, oniSpeed, st
     `distance to oni: ${distance.toFixed(1)} m`,
     `distance from start: ${distFromStart.toFixed(1)} m`,
     `oni speed: ${oniSpeed} m/s`,
+    `heading: ${playerHeading != null ? playerHeading.toFixed(0) + '°' : '不明'} (${headingSource ?? '-'})`,
+    `direction cue: ${direction ? `pulse×${direction.pulseCount}, ${direction.filterHz.toFixed(0)}Hz` : '-'}`,
   ].join('\n');
   mapView.update({ player, oni, startPoint, playAreaRadius, captureDistance });
 }

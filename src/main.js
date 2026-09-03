@@ -18,6 +18,11 @@ let outOfArea = false;
 let lastAreaWarnAt = 0;
 let wakeLock = null;
 let playerHeading = null; // degrees, estimated from recent GPS movement
+let headingSource = null; // 'gps-native' | 'gps-computed' | 'compass' | null, for the debug panel
+let compassHeading = null; // degrees, smoothed device-orientation fallback
+let compassVecX = null;
+let compassVecY = null;
+let orientationEventType = null; // which event we're listening to, for cleanup
 
 const audio = new AudioEngine();
 
@@ -68,20 +73,19 @@ async function startGame(formConfig) {
   outOfArea = false;
   lastAreaWarnAt = 0;
   playerHeading = null;
+  headingSource = null;
 
   gps.start(
     (newFix) => {
       const prevPlayer = player;
       player = { lat: newFix.lat, lon: newFix.lon, accuracy: newFix.accuracy };
-      const moved = distanceMeters(prevPlayer.lat, prevPlayer.lon, newFix.lat, newFix.lon);
-      if (moved >= config.headingMinMoveM) {
-        playerHeading = bearingDegrees(prevPlayer.lat, prevPlayer.lon, newFix.lat, newFix.lon);
-      }
+      updatePlayerHeading(prevPlayer, newFix);
     },
     (err) => ui.setGpsWarning('⚠ ' + err.message)
   );
 
   requestWakeLock();
+  if (config.enableCompassFallback) startCompass();
 
   let lastTick = performance.now();
   oniLoopId = setInterval(() => {
@@ -104,6 +108,92 @@ async function startGame(formConfig) {
 
   ui.showScreen('running');
   uiLoopId = setInterval(updateRunningUI, 250);
+}
+
+// Updates the module-level `playerHeading` estimate from a new GPS fix.
+// Prefers the platform's own fused direction-of-travel (GeolocationCoordinates
+// .heading — typically derived by the OS location provider from GPS +
+// available sensors, and generally more reliable than differencing two raw
+// fixes ourselves, especially at walking speed). Falls back to a bearing
+// between the last two fixes only when that movement clearly exceeds both
+// fixes' combined GPS accuracy — otherwise a "heading" computed from two
+// points a few meters apart is just noise, not a real direction change.
+function updatePlayerHeading(prevPlayer, newFix) {
+  if (newFix.heading != null && !Number.isNaN(newFix.heading)) {
+    playerHeading = newFix.heading;
+    headingSource = 'gps-native';
+    return;
+  }
+  const moved = distanceMeters(prevPlayer.lat, prevPlayer.lon, newFix.lat, newFix.lon);
+  const noiseFloor = (prevPlayer.accuracy || 0) + (newFix.accuracy || 0);
+  if (moved >= Math.max(config.headingMinMoveM, noiseFloor)) {
+    playerHeading = bearingDegrees(prevPlayer.lat, prevPlayer.lon, newFix.lat, newFix.lon);
+    headingSource = 'gps-computed';
+    return;
+  }
+  // Genuinely can't tell from GPS right now (stationary, or movement is
+  // just noise) — fall back to the smoothed compass reading if we have one.
+  if (config.enableCompassFallback && compassHeading != null) {
+    playerHeading = compassHeading;
+    headingSource = 'compass';
+  }
+}
+
+// event.alpha (device orientation) needs `absolute: true` (or iOS's
+// webkitCompassHeading) to be referenced to true north rather than an
+// arbitrary starting angle. Smoothed via a circular EMA (averaging raw
+// degrees breaks across the 0/360 wrap) because a phone held or
+// armband-mounted by a running person swings and bounces constantly —
+// see CLAUDE.md.
+function handleOrientation(event) {
+  let heading;
+  if (typeof event.webkitCompassHeading === 'number') {
+    heading = event.webkitCompassHeading;
+  } else if (event.absolute === true && event.alpha != null) {
+    heading = (360 - event.alpha) % 360;
+  } else {
+    return;
+  }
+
+  const rad = (heading * Math.PI) / 180;
+  const x = Math.cos(rad);
+  const y = Math.sin(rad);
+  const w = config.compassSmoothing;
+  if (compassVecX == null) {
+    compassVecX = x;
+    compassVecY = y;
+  } else {
+    compassVecX = compassVecX * (1 - w) + x * w;
+    compassVecY = compassVecY * (1 - w) + y * w;
+  }
+  compassHeading = ((Math.atan2(compassVecY, compassVecX) * 180) / Math.PI + 360) % 360;
+}
+
+async function startCompass() {
+  if (typeof DeviceOrientationEvent === 'undefined') return;
+  if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+    try {
+      const result = await DeviceOrientationEvent.requestPermission();
+      if (result !== 'granted') return;
+    } catch {
+      return;
+    }
+  }
+  compassHeading = null;
+  compassVecX = null;
+  compassVecY = null;
+  orientationEventType = 'ondeviceorientationabsolute' in window ? 'deviceorientationabsolute' : 'deviceorientation';
+  window.addEventListener(orientationEventType, handleOrientation);
+}
+
+function stopCompass() {
+  if (orientationEventType) {
+    window.removeEventListener(orientationEventType, handleOrientation);
+    orientationEventType = null;
+  }
+  compassHeading = null;
+  compassVecX = null;
+  compassVecY = null;
 }
 
 // Relative bearing of the oni vs. the player's estimated heading, mapped to
@@ -179,6 +269,9 @@ function updateRunningUI() {
     startPoint,
     playAreaRadius: config.playAreaRadius,
     captureDistance: config.captureDistance,
+    playerHeading,
+    headingSource,
+    direction: config.enableDirectionalCues ? computeDirectionCue() : null,
   });
 }
 
@@ -191,6 +284,7 @@ function endGame(reason, message) {
   audio.stopDistanceBeeper();
   gps.stop();
   releaseWakeLock();
+  stopCompass();
 
   if (reason === EndReason.CAPTURED) audio.playCaptureSound();
 
