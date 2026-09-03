@@ -44,6 +44,9 @@ export function init(cb) {
     els.mapError.setAttribute('hidden', '');
     try {
       await mapView.setMode(els.mapMode.value);
+      if (els.mapMode.value !== 'off') {
+        els.mapContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
     } catch (err) {
       els.mapMode.value = 'off';
       els.mapError.textContent = err.message;

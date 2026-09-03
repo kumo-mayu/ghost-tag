@@ -156,6 +156,7 @@ summary { cursor: pointer; color: var(--muted); }
   border-radius: 8px;
   overflow: hidden;
   background: var(--panel);
+  min-height: 260px;
 }
 #map-container canvas { display: block; width: 100%; height: auto; }
 
