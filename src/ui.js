@@ -64,11 +64,13 @@ function readConfig() {
     captureDistance: Number(fd.get('captureDistance')),
     enableHighAccuracy: fd.get('enableHighAccuracy') === 'on',
     areaExitGameOver: fd.get('areaExitGameOver') === 'on',
+    enableStereoPan: fd.get('enableStereoPan') === 'on',
     oniTickMs: Number(fd.get('oniTickMs')),
     gpsLostTimeoutMs: Number(fd.get('gpsLostTimeoutMs')),
     audioMinIntervalMs: Number(fd.get('audioMinIntervalMs')),
     audioMaxIntervalMs: Number(fd.get('audioMaxIntervalMs')),
     audioFarDistance: Number(fd.get('audioFarDistance')),
+    headingMinMoveM: Number(fd.get('headingMinMoveM')),
   };
 }
 

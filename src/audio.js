@@ -1,7 +1,8 @@
-// Distance -> sound. Initial version: a single beep whose repeat interval
-// shrinks as the oni gets closer (linear interpolation between
-// captureDistance and farDistance). No stereo positioning / footsteps /
-// volume scaling yet — kept out of scope for the first prototype.
+// Distance -> sound. A single beep whose repeat interval shrinks as the
+// oni gets closer (linear interpolation between captureDistance and
+// farDistance). Optional experimental left/right panning conveys a rough
+// direction; footsteps / volume scaling / breathing etc. stay out of scope
+// for the first prototype.
 export class AudioEngine {
   constructor() {
     this.ctx = null;
@@ -20,13 +21,24 @@ export class AudioEngine {
     }
   }
 
-  _beep(freq = 880, durationMs = 90, gain = 0.25) {
+  // pan: -1 (full left) .. 0 (center) .. 1 (full right). Ignored on
+  // browsers without StereoPannerNode support (falls back to mono).
+  _beep(freq = 880, durationMs = 90, gain = 0.25, pan = 0) {
     if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
     const g = this.ctx.createGain();
     osc.type = 'sine';
     osc.frequency.value = freq;
-    osc.connect(g).connect(this.ctx.destination);
+
+    let outNode = g;
+    if (this.ctx.createStereoPanner) {
+      const panner = this.ctx.createStereoPanner();
+      panner.pan.value = Math.max(-1, Math.min(1, pan));
+      g.connect(panner);
+      outNode = panner;
+    }
+    osc.connect(g);
+    outNode.connect(this.ctx.destination);
 
     const now = this.ctx.currentTime;
     g.gain.setValueAtTime(gain, now);
@@ -36,7 +48,8 @@ export class AudioEngine {
   }
 
   // getDistance: () => number (meters, oni to player), read at each tick.
-  startDistanceBeeper({ minIntervalMs, maxIntervalMs, farDistance, captureDistance, getDistance }) {
+  // getPan: optional () => number in [-1, 1], read at each tick.
+  startDistanceBeeper({ minIntervalMs, maxIntervalMs, farDistance, captureDistance, getDistance, getPan }) {
     this.stopDistanceBeeper();
     const span = Math.max(farDistance - captureDistance, 1);
     const scheduleNext = () => {
@@ -44,7 +57,8 @@ export class AudioEngine {
       const clamped = Math.min(Math.max(dist, captureDistance), farDistance);
       const t = (clamped - captureDistance) / span;
       const interval = minIntervalMs + t * (maxIntervalMs - minIntervalMs);
-      this._beep(880, 90, 0.25);
+      const pan = getPan ? getPan() : 0;
+      this._beep(880, 90, 0.25, pan);
       this.timer = setTimeout(scheduleNext, interval);
     };
     scheduleNext();

@@ -34,6 +34,10 @@
       <input type="checkbox" name="areaExitGameOver">
       エリア外に出たら即ゲームオーバー（未チェック時は警告のみ）
     </label>
+    <label class="checkbox">
+      <input type="checkbox" name="enableStereoPan">
+      方向定位を試す（実験的・要イヤホン／スピーカーでは効果なし）
+    </label>
 
     <details>
       <summary>詳細設定</summary>
@@ -51,6 +55,9 @@
       </label>
       <label>音: 遠距離とみなす距離 (m)
         <input type="number" name="audioFarDistance" value="150" min="20" step="10">
+      </label>
+      <label>方向推定に必要な最小移動距離 (m)
+        <input type="number" name="headingMinMoveM" value="5" min="1" step="1">
       </label>
     </details>
 

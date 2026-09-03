@@ -25,5 +25,11 @@ export function defaultConfig() {
     audioMinIntervalMs: 150,
     audioMaxIntervalMs: 2000,
     audioFarDistance: 150,
+    // Experimental: pans the beep left/right based on the oni's bearing
+    // relative to the player's estimated heading of travel (derived from
+    // recent GPS movement, no compass/sensor). Needs headphones/earbuds —
+    // a phone's built-in speaker(s) won't convey stereo separation.
+    enableStereoPan: false,
+    headingMinMoveM: 5,
   };
 }

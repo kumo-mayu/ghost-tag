@@ -1,7 +1,7 @@
 import { GpsTracker } from './gps.js';
 import { Oni } from './oniAI.js';
 import { AudioEngine } from './audio.js';
-import { distanceMeters, destinationPoint, randomBearing } from './geo.js';
+import { distanceMeters, bearingDegrees, destinationPoint, randomBearing } from './geo.js';
 import { GameStatus, EndReason } from './gameState.js';
 import * as ui from './ui.js';
 
@@ -17,6 +17,7 @@ let startedAt = 0;
 let outOfArea = false;
 let lastAreaWarnAt = 0;
 let wakeLock = null;
+let playerHeading = null; // degrees, estimated from recent GPS movement
 
 const audio = new AudioEngine();
 
@@ -66,10 +67,16 @@ async function startGame(formConfig) {
   startedAt = performance.now();
   outOfArea = false;
   lastAreaWarnAt = 0;
+  playerHeading = null;
 
   gps.start(
     (newFix) => {
+      const prevPlayer = player;
       player = { lat: newFix.lat, lon: newFix.lon, accuracy: newFix.accuracy };
+      const moved = distanceMeters(prevPlayer.lat, prevPlayer.lon, newFix.lat, newFix.lon);
+      if (moved >= config.headingMinMoveM) {
+        playerHeading = bearingDegrees(prevPlayer.lat, prevPlayer.lon, newFix.lat, newFix.lon);
+      }
     },
     (err) => ui.setGpsWarning('⚠ ' + err.message)
   );
@@ -91,10 +98,22 @@ async function startGame(formConfig) {
     farDistance: config.audioFarDistance,
     captureDistance: config.captureDistance,
     getDistance: () => distanceMeters(player.lat, player.lon, oni.lat, oni.lon),
+    getPan: config.enableStereoPan ? computePan : undefined,
   });
 
   ui.showScreen('running');
   uiLoopId = setInterval(updateRunningUI, 250);
+}
+
+// Relative bearing of the oni vs. the player's estimated heading, mapped to
+// a stereo pan (-1 left .. 0 center/ambiguous .. +1 right). Front and behind
+// both come out centered — plain stereo can't distinguish them, and this
+// prototype doesn't try to (see CLAUDE.md).
+function computePan() {
+  if (playerHeading == null) return 0;
+  const oniBearing = bearingDegrees(player.lat, player.lon, oni.lat, oni.lon);
+  const relative = ((oniBearing - playerHeading + 540) % 360) - 180; // -180..180
+  return Math.sin((relative * Math.PI) / 180);
 }
 
 function checkCapture() {
