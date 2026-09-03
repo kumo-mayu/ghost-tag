@@ -12,6 +12,12 @@
 
 * { box-sizing: border-box; }
 
+/* The `hidden` attribute's UA-stylesheet `display:none` has normal
+   (non-!important) author-origin priority, so any of our own `display`
+   rules on the same element (e.g. `.screen`, `#debug-panel`) would
+   otherwise silently win and leave "hidden" elements rendered. */
+[hidden] { display: none !important; }
+
 html, body {
   margin: 0;
   padding: 0;
