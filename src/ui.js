@@ -46,7 +46,13 @@ export function init(cb) {
   els.setupForm.addEventListener('submit', (e) => {
     e.preventDefault();
     hideError();
-    callbacks.onStart(readConfig());
+    const config = readConfig();
+    const validationError = validateConfig(config);
+    if (validationError) {
+      showError(validationError);
+      return;
+    }
+    callbacks.onStart(config);
   });
   els.stopBtn.addEventListener('click', () => callbacks.onStop());
   els.audioTestBtn.addEventListener('click', () => callbacks.onTestAudio());
@@ -95,6 +101,26 @@ function readConfig() {
     compassSmoothing: Number(fd.get('compassSmoothing')),
     poorAccuracyThresholdM: Number(fd.get('poorAccuracyThresholdM')),
   };
+}
+
+function validateConfig(config) {
+  const numericValues = Object.entries(config).filter(([, value]) => typeof value === 'number');
+  if (numericValues.some(([, value]) => !Number.isFinite(value))) {
+    return '設定値には有効な数値を入力してください';
+  }
+  if (config.captureDistance >= config.oniInitialDistance) {
+    return '捕獲判定距離は鬼の初期出現距離より小さくしてください';
+  }
+  if (config.audioMinIntervalMs > config.audioMaxIntervalMs) {
+    return '音の最短間隔は最長間隔以下にしてください';
+  }
+  if (config.captureDistance >= config.audioFarDistance) {
+    return '音の遠距離判定は捕獲判定距離より大きくしてください';
+  }
+  if (config.directionMinFilterHz > config.directionMaxFilterHz) {
+    return '方向フィルターの下限は上限以下にしてください';
+  }
+  return '';
 }
 
 export function setLogCount(n) {
