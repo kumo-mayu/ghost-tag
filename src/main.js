@@ -25,6 +25,7 @@ let compassVecX = null;
 let compassVecY = null;
 let orientationEventType = null; // which event we're listening to, for cleanup
 let gpsWasLost = false;
+let lastOniTick = 0;
 
 const audio = new AudioEngine();
 
@@ -138,15 +139,17 @@ async function startGame(formConfig) {
   requestWakeLock();
   if (config.enableCompassFallback) startCompass();
 
-  let lastTick = performance.now();
+  lastOniTick = performance.now();
   oniLoopId = setInterval(() => {
     const now = performance.now();
-    if (gps.isLost()) {
-      lastTick = now;
+    if (document.visibilityState !== 'visible' || gps.isLost()) {
+      lastOniTick = now;
       return;
     }
-    const dt = (now - lastTick) / 1000;
-    lastTick = now;
+    const elapsed = (now - lastOniTick) / 1000;
+    const maxDt = Math.max(config.oniTickMs / 1000 * 2, 0.25);
+    const dt = Math.min(elapsed, maxDt);
+    lastOniTick = now;
     oni.update(dt, player.lat, player.lon);
     checkCapture();
   }, config.oniTickMs);
@@ -159,7 +162,7 @@ async function startGame(formConfig) {
     getDistance: () => distanceMeters(player.lat, player.lon, oni.lat, oni.lon),
     getPan: config.enableStereoPan ? computePan : undefined,
     getDirection: config.enableDirectionalCues ? computeDirectionCue : undefined,
-    shouldPlay: () => !gps.isLost(),
+    shouldPlay: () => document.visibilityState === 'visible' && !gps.isLost(),
   });
 
   ui.showScreen('running');
@@ -390,7 +393,12 @@ function releaseWakeLock() {
 }
 
 document.addEventListener('visibilitychange', () => {
-  if (status === GameStatus.RUNNING && document.visibilityState === 'visible') {
+  if (status !== GameStatus.RUNNING) return;
+  lastOniTick = performance.now();
+  if (document.visibilityState === 'visible') {
+    logger.logEvent('foreground', { t: Math.round(performance.now() - startedAt) });
     requestWakeLock();
+  } else {
+    logger.logEvent('background', { t: Math.round(performance.now() - startedAt) });
   }
 });
