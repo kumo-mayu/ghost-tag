@@ -224,6 +224,9 @@ function updatePlayerHeading(prevPlayer, newFix) {
   if (config.enableCompassFallback && compassHeading != null) {
     playerHeading = compassHeading;
     headingSource = 'compass';
+  } else {
+    playerHeading = null;
+    headingSource = null;
   }
 }
 
@@ -243,6 +246,11 @@ function handleOrientation(event) {
     return;
   }
 
+  // DeviceOrientation alpha assumes the device's natural orientation.
+  // Correct it so "front" remains the visual top when the phone rotates.
+  const screenAngle = screen.orientation?.angle ?? window.orientation ?? 0;
+  heading = (heading + screenAngle + 360) % 360;
+
   const rad = (heading * Math.PI) / 180;
   const x = Math.cos(rad);
   const y = Math.sin(rad);
@@ -255,6 +263,10 @@ function handleOrientation(event) {
     compassVecY = compassVecY * (1 - w) + y * w;
   }
   compassHeading = ((Math.atan2(compassVecY, compassVecX) * 180) / Math.PI + 360) % 360;
+  if (headingSource === 'compass' || headingSource == null) {
+    playerHeading = compassHeading;
+    headingSource = 'compass';
+  }
 }
 
 async function startCompass() {

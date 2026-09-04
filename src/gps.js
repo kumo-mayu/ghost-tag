@@ -125,6 +125,7 @@ export class GpsTracker {
       lat: pos.coords.latitude,
       lon: pos.coords.longitude,
       accuracy: pos.coords.accuracy,
+      speed: pos.coords.speed,
       // Platform-fused direction of travel, degrees / null if unavailable /
       // NaN while stationary. When present this is generally more reliable
       // than differencing two fixes ourselves (see main.js heading logic).
