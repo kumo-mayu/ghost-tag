@@ -11,6 +11,7 @@ export class AudioEngine {
   constructor() {
     this.ctx = null;
     this.timer = null;
+    this.pendingTimers = new Set();
   }
 
   // Must be called from a user-gesture handler (e.g. the START button click)
@@ -34,7 +35,15 @@ export class AudioEngine {
   async playTestTone() {
     await this.init();
     this._beep(660, 120, 0.25);
-    setTimeout(() => this._beep(880, 120, 0.25), 160);
+    this._schedule(() => this._beep(880, 120, 0.25), 160);
+  }
+
+  _schedule(callback, delayMs) {
+    const id = setTimeout(() => {
+      this.pendingTimers.delete(id);
+      callback();
+    }, delayMs);
+    this.pendingTimers.add(id);
   }
 
   // pan: -1 (full left) .. 0 (center) .. 1 (full right). Ignored on
@@ -79,7 +88,7 @@ export class AudioEngine {
   _playBurst({ pulseCount, gapMs, freq, gain, pan, filterHz }) {
     const durationMs = Math.min(70, gapMs * 0.7);
     for (let i = 0; i < pulseCount; i++) {
-      setTimeout(() => this._beep(freq, durationMs, gain, pan, filterHz), i * gapMs);
+      this._schedule(() => this._beep(freq, durationMs, gain, pan, filterHz), i * gapMs);
     }
   }
 
@@ -120,11 +129,13 @@ export class AudioEngine {
       clearTimeout(this.timer);
       this.timer = null;
     }
+    for (const timerId of this.pendingTimers) clearTimeout(timerId);
+    this.pendingTimers.clear();
   }
 
   playCaptureSound() {
     [660, 550, 440, 330].forEach((freq, i) => {
-      setTimeout(() => this._beep(freq, 250, 0.3), i * 220);
+      this._schedule(() => this._beep(freq, 250, 0.3), i * 220);
     });
   }
 
