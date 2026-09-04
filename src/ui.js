@@ -150,7 +150,7 @@ function formatTime(sec) {
   return `${m}:${s}`;
 }
 
-export function updateRunning({ elapsedSec, accuracy, gpsLost, outOfArea, poorAccuracy }) {
+export function updateRunning({ elapsedSec, accuracy, gpsLost, gpsMessage, outOfArea, poorAccuracy }) {
   els.runningTimer.textContent = formatTime(elapsedSec);
   els.gpsAccuracy.textContent = accuracy != null ? accuracy.toFixed(1) : '--';
 
@@ -160,7 +160,7 @@ export function updateRunning({ elapsedSec, accuracy, gpsLost, outOfArea, poorAc
   if (poorAccuracy) els.accuracyWarning.removeAttribute('hidden');
   else els.accuracyWarning.setAttribute('hidden', '');
 
-  if (gpsLost) setGpsWarning('⚠ GPS信号ロスト');
+  if (gpsLost) setGpsWarning(`⚠ ${gpsMessage || 'GPS信号ロスト'}（ゲーム一時停止中）`);
   else clearGpsWarning();
 }
 

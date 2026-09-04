@@ -8,6 +8,8 @@ export class GpsTracker {
     this.watchId = null;
     this.lastFix = null;
     this.lastFixAt = 0;
+    this.startedAt = 0;
+    this.lastError = null;
   }
 
   static isSupported() {
@@ -21,7 +23,7 @@ export class GpsTracker {
         return;
       }
       navigator.geolocation.getCurrentPosition(
-        (pos) => resolve(this._toFix(pos)),
+        (pos) => resolve(this._recordFix(pos)),
         (err) => reject(this._describeError(err)),
         { enableHighAccuracy: this.enableHighAccuracy, timeout: timeoutMs, maximumAge: 0 }
       );
@@ -29,13 +31,16 @@ export class GpsTracker {
   }
 
   start(onUpdate, onError) {
+    this.startedAt = this.startedAt || performance.now();
     this.watchId = navigator.geolocation.watchPosition(
       (pos) => {
-        this.lastFix = this._toFix(pos);
-        this.lastFixAt = performance.now();
+        this._recordFix(pos);
         onUpdate(this.lastFix);
       },
-      (err) => onError(this._describeError(err)),
+      (err) => {
+        this.lastError = this._describeError(err);
+        onError(this.lastError);
+      },
       { enableHighAccuracy: this.enableHighAccuracy, timeout: 20000, maximumAge: 0 }
     );
   }
@@ -48,8 +53,29 @@ export class GpsTracker {
   }
 
   isLost() {
-    if (!this.lastFix) return false;
-    return performance.now() - this.lastFixAt > this.lostTimeoutMs;
+    return this.getHealth().lost;
+  }
+
+  getHealth() {
+    if (this.lastError) {
+      return { lost: true, message: this.lastError.message };
+    }
+    const referenceAt = this.lastFixAt || this.startedAt;
+    if (!referenceAt) {
+      return { lost: true, message: 'GPS信号を待っています' };
+    }
+    if (performance.now() - referenceAt > this.lostTimeoutMs) {
+      return { lost: true, message: 'GPS信号ロスト' };
+    }
+    return { lost: false, message: '' };
+  }
+
+  _recordFix(pos) {
+    this.lastFix = this._toFix(pos);
+    this.lastFixAt = performance.now();
+    this.startedAt = this.startedAt || this.lastFixAt;
+    this.lastError = null;
+    return this.lastFix;
   }
 
   _toFix(pos) {

@@ -24,6 +24,7 @@ let compassHeading = null; // degrees, smoothed device-orientation fallback
 let compassVecX = null;
 let compassVecY = null;
 let orientationEventType = null; // which event we're listening to, for cleanup
+let gpsWasLost = false;
 
 const audio = new AudioEngine();
 
@@ -104,6 +105,7 @@ async function startGame(formConfig) {
   lastAreaWarnAt = 0;
   playerHeading = null;
   headingSource = null;
+  gpsWasLost = false;
 
   logger.startSession(config);
 
@@ -139,6 +141,10 @@ async function startGame(formConfig) {
   let lastTick = performance.now();
   oniLoopId = setInterval(() => {
     const now = performance.now();
+    if (gps.isLost()) {
+      lastTick = now;
+      return;
+    }
     const dt = (now - lastTick) / 1000;
     lastTick = now;
     oni.update(dt, player.lat, player.lon);
@@ -153,6 +159,7 @@ async function startGame(formConfig) {
     getDistance: () => distanceMeters(player.lat, player.lon, oni.lat, oni.lon),
     getPan: config.enableStereoPan ? computePan : undefined,
     getDirection: config.enableDirectionalCues ? computeDirectionCue : undefined,
+    shouldPlay: () => !gps.isLost(),
   });
 
   ui.showScreen('running');
@@ -309,11 +316,21 @@ function updateRunningUI() {
 
   const poorAccuracy = player.accuracy != null && player.accuracy > config.poorAccuracyThresholdM;
 
+  const gpsHealth = gps.getHealth();
+  if (gpsHealth.lost !== gpsWasLost) {
+    logger.logEvent(gpsHealth.lost ? 'gpsLost' : 'gpsRecovered', {
+      t: Math.round(now - startedAt),
+      message: gpsHealth.message || undefined,
+    });
+    gpsWasLost = gpsHealth.lost;
+  }
+
   ui.updateRunning({
     elapsedSec: Math.floor((now - startedAt) / 1000),
     poorAccuracy,
     accuracy: player.accuracy,
-    gpsLost: gps.isLost(),
+    gpsLost: gpsHealth.lost,
+    gpsMessage: gpsHealth.message,
     outOfArea,
   });
 

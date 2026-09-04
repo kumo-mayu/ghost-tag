@@ -87,10 +87,14 @@ export class AudioEngine {
   // getPan: optional () => number in [-1, 1], read at each tick.
   // getDirection: optional () => { pulseCount, filterHz, pulseGapMs } | null,
   //   read at each tick. null falls back to a single plain beep.
-  startDistanceBeeper({ minIntervalMs, maxIntervalMs, farDistance, captureDistance, getDistance, getPan, getDirection }) {
+  startDistanceBeeper({ minIntervalMs, maxIntervalMs, farDistance, captureDistance, getDistance, getPan, getDirection, shouldPlay }) {
     this.stopDistanceBeeper();
     const span = Math.max(farDistance - captureDistance, 1);
     const scheduleNext = () => {
+      if (shouldPlay && !shouldPlay()) {
+        this.timer = setTimeout(scheduleNext, Math.min(maxIntervalMs, 500));
+        return;
+      }
       const dist = getDistance();
       const clamped = Math.min(Math.max(dist, captureDistance), farDistance);
       const t = (clamped - captureDistance) / span;
