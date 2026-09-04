@@ -29,6 +29,14 @@ const audio = new AudioEngine();
 
 ui.init({
   onStart: startGame,
+  onTestAudio: async () => {
+    try {
+      await audio.playTestTone();
+      ui.setAudioStatus('テスト音を再生しました');
+    } catch (err) {
+      ui.setAudioStatus(err.message, true);
+    }
+  },
   onStop: () => endGame(EndReason.STOPPED),
   onRestart: () => {
     status = GameStatus.READY;
@@ -47,6 +55,15 @@ async function startGame(formConfig) {
   if (status === GameStatus.RUNNING) return;
   config = formConfig;
 
+  // Invoke AudioContext.resume() before the first asynchronous permission/
+  // location wait so mobile autoplay policy sees the START tap directly.
+  try {
+    await audio.init();
+  } catch (err) {
+    ui.showError(err.message);
+    return;
+  }
+
   if (!GpsTracker.isSupported()) {
     ui.showError('このブラウザはGeolocationに対応していません');
     return;
@@ -64,11 +81,6 @@ async function startGame(formConfig) {
     ui.showError(err.message);
     return;
   }
-
-  // Audio must init synchronously inside the user gesture (form submit / button
-  // click) chain for mobile Chrome to allow it — this call sits right after
-  // the awaited getCurrentPosition, so make sure this stays close to the click.
-  audio.init();
 
   player = { lat: fix.lat, lon: fix.lon, accuracy: fix.accuracy };
   startPoint = { lat: fix.lat, lon: fix.lon };

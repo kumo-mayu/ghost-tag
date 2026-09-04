@@ -9,6 +9,8 @@ export function init(cb) {
 
   els.setupForm = document.getElementById('config-form');
   els.setupError = document.getElementById('setup-error');
+  els.audioTestBtn = document.getElementById('audio-test-btn');
+  els.audioStatus = document.getElementById('audio-status');
   els.stopBtn = document.getElementById('stop-btn');
   els.restartBtn = document.getElementById('restart-btn');
   els.debugToggle = document.getElementById('debug-toggle');
@@ -42,6 +44,7 @@ export function init(cb) {
     callbacks.onStart(readConfig());
   });
   els.stopBtn.addEventListener('click', () => callbacks.onStop());
+  els.audioTestBtn.addEventListener('click', () => callbacks.onTestAudio());
   els.restartBtn.addEventListener('click', () => callbacks.onRestart());
   els.debugToggle.addEventListener('click', toggleDebug);
   els.logDownloadBtn.addEventListener('click', () => callbacks.onDownloadLog());
@@ -113,6 +116,11 @@ export function showScreen(name) {
 export function showError(msg) {
   els.setupError.textContent = msg;
   els.setupError.removeAttribute('hidden');
+}
+
+export function setAudioStatus(msg, isError = false) {
+  els.audioStatus.textContent = msg;
+  els.audioStatus.classList.toggle('error', isError);
 }
 
 function hideError() {

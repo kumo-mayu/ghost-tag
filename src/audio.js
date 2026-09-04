@@ -15,14 +15,26 @@ export class AudioEngine {
 
   // Must be called from a user-gesture handler (e.g. the START button click)
   // so the AudioContext is allowed to run on mobile Chrome.
-  init() {
+  async init() {
     if (!this.ctx) {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) {
+        throw new Error('このブラウザはWeb Audio APIに対応していません');
+      }
       this.ctx = new AudioContextClass();
     }
     if (this.ctx.state === 'suspended') {
-      this.ctx.resume();
+      await this.ctx.resume();
     }
+    if (this.ctx.state !== 'running') {
+      throw new Error('音声を開始できません。端末の音量を確認して、もう一度操作してください');
+    }
+  }
+
+  async playTestTone() {
+    await this.init();
+    this._beep(660, 120, 0.25);
+    setTimeout(() => this._beep(880, 120, 0.25), 160);
   }
 
   // pan: -1 (full left) .. 0 (center) .. 1 (full right). Ignored on
