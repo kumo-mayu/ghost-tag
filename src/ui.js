@@ -9,6 +9,7 @@ export function init(cb) {
 
   els.setupForm = document.getElementById('config-form');
   els.setupError = document.getElementById('setup-error');
+  els.startBtn = document.getElementById('start-btn');
   els.audioTestBtn = document.getElementById('audio-test-btn');
   els.audioStatus = document.getElementById('audio-status');
   els.stopBtn = document.getElementById('stop-btn');
@@ -121,6 +122,11 @@ export function showError(msg) {
 export function setAudioStatus(msg, isError = false) {
   els.audioStatus.textContent = msg;
   els.audioStatus.classList.toggle('error', isError);
+}
+
+export function setStartPending(pending) {
+  els.startBtn.disabled = pending;
+  els.startBtn.textContent = pending ? 'GPS取得中…' : 'START';
 }
 
 function hideError() {

@@ -1,5 +1,6 @@
 export const GameStatus = {
   READY: 'READY',
+  STARTING: 'STARTING',
   RUNNING: 'RUNNING',
   ENDED: 'ENDED',
 };

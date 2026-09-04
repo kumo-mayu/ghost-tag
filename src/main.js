@@ -40,6 +40,7 @@ ui.init({
   onStop: () => endGame(EndReason.STOPPED),
   onRestart: () => {
     status = GameStatus.READY;
+    ui.setStartPending(false);
     ui.showScreen('setup');
   },
   onDownloadLog: () => logger.downloadLog(),
@@ -52,7 +53,9 @@ ui.init({
 ui.setLogCount(logger.getSessionCount());
 
 async function startGame(formConfig) {
-  if (status === GameStatus.RUNNING) return;
+  if (status !== GameStatus.READY) return;
+  status = GameStatus.STARTING;
+  ui.setStartPending(true);
   config = formConfig;
 
   // Invoke AudioContext.resume() before the first asynchronous permission/
@@ -61,11 +64,15 @@ async function startGame(formConfig) {
     await audio.init();
   } catch (err) {
     ui.showError(err.message);
+    status = GameStatus.READY;
+    ui.setStartPending(false);
     return;
   }
 
   if (!GpsTracker.isSupported()) {
     ui.showError('このブラウザはGeolocationに対応していません');
+    status = GameStatus.READY;
+    ui.setStartPending(false);
     return;
   }
 
@@ -79,6 +86,8 @@ async function startGame(formConfig) {
     fix = await gps.getCurrentPosition(20000);
   } catch (err) {
     ui.showError(err.message);
+    status = GameStatus.READY;
+    ui.setStartPending(false);
     return;
   }
 
@@ -89,6 +98,7 @@ async function startGame(formConfig) {
   oni = new Oni({ lat: oniStart.lat, lon: oniStart.lon, speedMps: config.oniSpeed });
 
   status = GameStatus.RUNNING;
+  ui.setStartPending(false);
   startedAt = performance.now();
   outOfArea = false;
   lastAreaWarnAt = 0;

@@ -106,6 +106,7 @@ summary { cursor: pointer; color: var(--muted); }
 }
 
 .big-button.stop { background: var(--danger); color: #2a0000; }
+.big-button:disabled { opacity: 0.55; }
 
 .error { color: var(--danger); }
 
