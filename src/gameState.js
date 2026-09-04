@@ -15,7 +15,6 @@ export const EndReason = {
 // Not tuned yet; see CLAUDE.md "未確定事項ログ".
 export function defaultConfig() {
   return {
-    playAreaRadius: 300,
     oniInitialDistance: 150,
     oniSpeed: 2.0,
     captureDistance: 15,

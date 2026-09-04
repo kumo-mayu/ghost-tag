@@ -1,7 +1,7 @@
 import { GpsTracker } from './gps.js';
 import { Oni } from './oniAI.js';
 import { AudioEngine } from './audio.js';
-import { distanceMeters, bearingDegrees, destinationPoint, randomBearing } from './geo.js';
+import { distanceMeters, bearingDegrees, destinationPoint, randomBearing, isPointInPolygon } from './geo.js';
 import { GameStatus, EndReason } from './gameState.js';
 import * as ui from './ui.js';
 import * as logger from './logger.js';
@@ -126,6 +126,7 @@ async function startGame(formConfig) {
 function beginRunning(fix) {
   player = { lat: fix.lat, lon: fix.lon, accuracy: fix.accuracy };
   startPoint = { lat: fix.lat, lon: fix.lon };
+  ui.resetMapTrail();
 
   const oniStart = destinationPoint(fix.lat, fix.lon, randomBearing(), config.oniInitialDistance);
   oni = new Oni({ lat: oniStart.lat, lon: oniStart.lon, speedMps: config.oniSpeed });
@@ -345,7 +346,7 @@ function updateRunningUI() {
   const gpsHealth = gps.getHealth();
 
   const wasOutOfArea = outOfArea;
-  if (!gpsHealth.lost) outOfArea = distFromStart > config.playAreaRadius;
+  if (!gpsHealth.lost) outOfArea = !isPointInPolygon(player.lat, player.lon, config.playAreaPolygon);
   const now = performance.now();
   if (outOfArea && !wasOutOfArea) {
     logger.logEvent('areaExit', { t: Math.round(now - startedAt) });
@@ -389,7 +390,7 @@ function updateRunningUI() {
     distFromStart,
     oniSpeed: config.oniSpeed,
     startPoint,
-    playAreaRadius: config.playAreaRadius,
+    playAreaPolygon: config.playAreaPolygon,
     captureDistance: config.captureDistance,
     playerHeading,
     headingSource,

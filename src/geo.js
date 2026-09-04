@@ -58,3 +58,68 @@ export function destinationPoint(lat, lon, bearingDeg, distanceM) {
 export function randomBearing() {
   return Math.random() * 360;
 }
+
+// Projects (lat, lon) onto a local tangent plane centered at (originLat,
+// originLon), in meters, x = east, y = north. Accurate enough at the
+// hundreds-of-meters scale this game operates at; not meant for large areas.
+function toLocalMeters(originLat, originLon, lat, lon) {
+  const dist = distanceMeters(originLat, originLon, lat, lon);
+  const brg = toRad(bearingDegrees(originLat, originLon, lat, lon));
+  return { x: dist * Math.sin(brg), y: dist * Math.cos(brg) };
+}
+
+function pointToSegmentDistance(p, a, b) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const lenSq = dx * dx + dy * dy;
+  const t = lenSq === 0 ? 0 : Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq));
+  const cx = a.x + t * dx;
+  const cy = a.y + t * dy;
+  return Math.hypot(p.x - cx, p.y - cy);
+}
+
+// polygon: array of { lat, lon }, at least 3 points. Ray-casting test in a
+// local meter projection anchored at polygon[0] — the projection distortion
+// is negligible at this game's scale, and only relative positions matter for
+// the crossing-count test anyway.
+export function isPointInPolygon(lat, lon, polygon) {
+  if (!polygon || polygon.length < 3) return true; // no area restriction defined
+  const origin = polygon[0];
+  const pt = toLocalMeters(origin.lat, origin.lon, lat, lon);
+  const pts = polygon.map((p) => toLocalMeters(origin.lat, origin.lon, p.lat, p.lon));
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const a = pts[i];
+    const b = pts[j];
+    const intersect =
+      a.y > pt.y !== b.y > pt.y && pt.x < ((b.x - a.x) * (pt.y - a.y)) / (b.y - a.y) + a.x;
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+export function distanceToPolygonBoundaryMeters(lat, lon, polygon) {
+  if (!polygon || polygon.length < 2) return Infinity;
+  const origin = polygon[0];
+  const pt = toLocalMeters(origin.lat, origin.lon, lat, lon);
+  const pts = polygon.map((p) => toLocalMeters(origin.lat, origin.lon, p.lat, p.lon));
+  let minDist = Infinity;
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i];
+    const b = pts[(i + 1) % pts.length];
+    minDist = Math.min(minDist, pointToSegmentDistance(pt, a, b));
+  }
+  return minDist;
+}
+
+// [minLat, minLon, maxLat, maxLon] — used to fit a map view to a polygon.
+export function polygonBounds(polygon) {
+  const lats = polygon.map((p) => p.lat);
+  const lons = polygon.map((p) => p.lon);
+  return {
+    minLat: Math.min(...lats),
+    maxLat: Math.max(...lats),
+    minLon: Math.min(...lons),
+    maxLon: Math.max(...lons),
+  };
+}

@@ -13,9 +13,19 @@
   <p class="warn">安全を確認した広い屋外（河川敷・空き地等）で、周囲に注意して開始してください。走行中は画面を見ずに音を頼りにしてください。</p>
 
   <form id="config-form">
-    <label>プレイエリア半径 (m)
-      <input type="number" name="playAreaRadius" value="300" min="30" step="10" required>
-    </label>
+    <div class="area-select">
+      <label>プレイエリア
+        <select id="area-slot-select">
+          <option value="">未選択</option>
+        </select>
+      </label>
+      <div class="area-select-buttons">
+        <button type="button" id="area-new-btn" class="link-button">新規作成</button>
+        <button type="button" id="area-edit-btn" class="link-button" disabled>編集</button>
+        <button type="button" id="area-delete-btn" class="link-button" disabled>削除</button>
+      </div>
+      <p class="hint">地図上にピンを置いて多角形のプレイエリアを作成・保存できます（3点以上）。複数保存して選び直せます。</p>
+    </div>
     <label>鬼の初期出現距離 (m)
       <input type="number" name="oniInitialDistance" value="150" min="10" step="10" required>
     </label>
@@ -131,6 +141,13 @@
         <option value="osm">地図タイル（OpenStreetMap）</option>
       </select>
     </label>
+    <label class="map-mode-label">地図の向き
+      <select id="map-orientation">
+        <option value="north">北を上に固定</option>
+        <option value="heading">進行方向を上に固定</option>
+      </select>
+    </label>
+    <p class="hint">プレイヤーの三角マークが進行方向を示す（両モード共通）。「進行方向を上」はシンプルモードのみ対応。緑＝プレイヤー、赤＝鬼の軌跡を表示（再スタートでリセット）。</p>
     <p id="map-error" class="error" hidden></p>
     <div id="map-container" hidden></div>
   </div>
@@ -141,6 +158,23 @@
   <p id="ended-message"></p>
   <p>経過時間: <span id="ended-time">--</span></p>
   <button id="restart-btn" class="big-button">もう一度</button>
+</div>
+
+<div id="screen-area-editor" class="screen" hidden>
+  <h2>プレイエリアを編集</h2>
+  <p class="hint">地図をタップしてピンを配置（3点以上）。ピンはドラッグで移動できます。位置情報はこの端末内でのみ使用・保存されます。</p>
+  <div id="area-editor-map"></div>
+  <div class="area-editor-buttons">
+    <button type="button" id="area-editor-locate-btn" class="link-button">現在地に移動</button>
+    <button type="button" id="area-editor-undo-btn" class="link-button">一つ戻す</button>
+    <button type="button" id="area-editor-clear-btn" class="link-button">全消去</button>
+  </div>
+  <label>エリア名
+    <input type="text" id="area-editor-name" placeholder="例: 河川敷A" maxlength="40">
+  </label>
+  <p id="area-editor-error" class="error" hidden></p>
+  <button type="button" id="area-editor-save-btn" class="big-button">保存</button>
+  <button type="button" id="area-editor-cancel-btn" class="link-button">キャンセル</button>
 </div>
 
 <script type="module" src="src/main.js"></script>

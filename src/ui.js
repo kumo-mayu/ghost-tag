@@ -1,8 +1,14 @@
 import { MapView } from './mapView.js';
+import { AreaEditor } from './areaEditor.js';
+import * as areaStore from './areaStore.js';
 
 let els = {};
 let callbacks = {};
 let mapView = null;
+let areaEditor = null;
+let selectedAreaSlotId = '';
+let selectedAreaPolygon = null;
+let editingAreaSlotId = null;
 
 export function init(cb) {
   callbacks = cb;
@@ -22,6 +28,7 @@ export function init(cb) {
   els.debugPanel = document.getElementById('debug-panel');
   els.debugText = document.getElementById('debug-text');
   els.mapMode = document.getElementById('map-mode');
+  els.mapOrientation = document.getElementById('map-orientation');
   els.mapError = document.getElementById('map-error');
   els.mapContainer = document.getElementById('map-container');
   els.runningTimer = document.getElementById('running-timer');
@@ -36,13 +43,28 @@ export function init(cb) {
   els.logCount = document.getElementById('log-count');
   els.logDownloadBtn = document.getElementById('log-download-btn');
   els.logClearBtn = document.getElementById('log-clear-btn');
+  els.areaSlotSelect = document.getElementById('area-slot-select');
+  els.areaNewBtn = document.getElementById('area-new-btn');
+  els.areaEditBtn = document.getElementById('area-edit-btn');
+  els.areaDeleteBtn = document.getElementById('area-delete-btn');
+  els.areaEditorMap = document.getElementById('area-editor-map');
+  els.areaEditorName = document.getElementById('area-editor-name');
+  els.areaEditorError = document.getElementById('area-editor-error');
+  els.areaEditorLocateBtn = document.getElementById('area-editor-locate-btn');
+  els.areaEditorUndoBtn = document.getElementById('area-editor-undo-btn');
+  els.areaEditorClearBtn = document.getElementById('area-editor-clear-btn');
+  els.areaEditorSaveBtn = document.getElementById('area-editor-save-btn');
+  els.areaEditorCancelBtn = document.getElementById('area-editor-cancel-btn');
   els.screens = {
     setup: document.getElementById('screen-setup'),
     running: document.getElementById('screen-running'),
     ended: document.getElementById('screen-ended'),
+    'area-editor': document.getElementById('screen-area-editor'),
   };
 
   mapView = new MapView(els.mapContainer);
+  areaEditor = new AreaEditor(els.areaEditorMap);
+  refreshAreaSlotOptions();
 
   els.setupForm.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -76,12 +98,108 @@ export function init(cb) {
       els.mapError.removeAttribute('hidden');
     }
   });
+  els.mapOrientation.addEventListener('change', () => {
+    mapView.setOrientation(els.mapOrientation.value);
+  });
+
+  els.areaSlotSelect.addEventListener('change', onAreaSlotChange);
+  els.areaDeleteBtn.addEventListener('click', () => {
+    if (!selectedAreaSlotId) return;
+    areaStore.deleteSlot(selectedAreaSlotId);
+    refreshAreaSlotOptions();
+  });
+  els.areaNewBtn.addEventListener('click', async () => {
+    editingAreaSlotId = null;
+    els.areaEditorName.value = '';
+    hideAreaEditorError();
+    showScreen('area-editor');
+    await areaEditor.open([]);
+    try {
+      await areaEditor.locate();
+    } catch (err) {
+      showAreaEditorError(err.message);
+    }
+  });
+  els.areaEditBtn.addEventListener('click', async () => {
+    const slot = selectedAreaSlotId ? areaStore.getSlot(selectedAreaSlotId) : null;
+    if (!slot) return;
+    editingAreaSlotId = slot.id;
+    els.areaEditorName.value = slot.name;
+    hideAreaEditorError();
+    showScreen('area-editor');
+    await areaEditor.open(slot.points);
+  });
+  els.areaEditorLocateBtn.addEventListener('click', async () => {
+    try {
+      await areaEditor.locate();
+    } catch (err) {
+      showAreaEditorError(err.message);
+    }
+  });
+  els.areaEditorUndoBtn.addEventListener('click', () => areaEditor.undo());
+  els.areaEditorClearBtn.addEventListener('click', () => areaEditor.clear());
+  els.areaEditorSaveBtn.addEventListener('click', () => {
+    const points = areaEditor.getPoints();
+    const name = els.areaEditorName.value.trim();
+    if (points.length < 3) {
+      showAreaEditorError('3点以上のピンを配置してください');
+      return;
+    }
+    if (!name) {
+      showAreaEditorError('エリア名を入力してください');
+      return;
+    }
+    const slot = areaStore.saveSlot({ id: editingAreaSlotId, name, points });
+    areaEditor.destroy();
+    refreshAreaSlotOptions(slot.id);
+    showScreen('setup');
+  });
+  els.areaEditorCancelBtn.addEventListener('click', () => {
+    areaEditor.destroy();
+    showScreen('setup');
+  });
+}
+
+function refreshAreaSlotOptions(selectId) {
+  const slots = areaStore.listSlots();
+  els.areaSlotSelect.innerHTML = '';
+  const emptyOpt = document.createElement('option');
+  emptyOpt.value = '';
+  emptyOpt.textContent = '未選択';
+  els.areaSlotSelect.appendChild(emptyOpt);
+  slots.forEach((s) => {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = `${s.name}（${s.points.length}点）`;
+    els.areaSlotSelect.appendChild(opt);
+  });
+  els.areaSlotSelect.value = selectId || '';
+  onAreaSlotChange();
+}
+
+function onAreaSlotChange() {
+  const id = els.areaSlotSelect.value;
+  const slot = id ? areaStore.getSlot(id) : null;
+  selectedAreaSlotId = id;
+  selectedAreaPolygon = slot ? slot.points : null;
+  els.areaEditBtn.disabled = !slot;
+  els.areaDeleteBtn.disabled = !slot;
+}
+
+function showAreaEditorError(msg) {
+  els.areaEditorError.textContent = msg;
+  els.areaEditorError.removeAttribute('hidden');
+}
+
+function hideAreaEditorError() {
+  els.areaEditorError.setAttribute('hidden', '');
+  els.areaEditorError.textContent = '';
 }
 
 function readConfig() {
   const fd = new FormData(els.setupForm);
   return {
-    playAreaRadius: Number(fd.get('playAreaRadius')),
+    playAreaPolygon: selectedAreaPolygon,
     oniInitialDistance: Number(fd.get('oniInitialDistance')),
     oniSpeed: Number(fd.get('oniSpeed')),
     captureDistance: Number(fd.get('captureDistance')),
@@ -105,6 +223,9 @@ function readConfig() {
 }
 
 function validateConfig(config) {
+  if (!config.playAreaPolygon || config.playAreaPolygon.length < 3) {
+    return 'プレイエリアを選択または作成してください（3点以上の多角形が必要です）';
+  }
   const numericValues = Object.entries(config).filter(([, value]) => typeof value === 'number');
   if (numericValues.some(([, value]) => !Number.isFinite(value))) {
     return '設定値には有効な数値を入力してください';
@@ -122,6 +243,10 @@ function validateConfig(config) {
     return '方向フィルターの下限は上限以下にしてください';
   }
   return '';
+}
+
+export function resetMapTrail() {
+  mapView.resetTrail();
 }
 
 export function setLogCount(n) {
@@ -216,7 +341,7 @@ export function updateRunning({ elapsedSec, accuracy, gpsLost, gpsMessage, outOf
   else clearGpsWarning();
 }
 
-export function updateDebug({ player, oni, distance, distFromStart, oniSpeed, startPoint, playAreaRadius, captureDistance, playerHeading, headingSource, direction }) {
+export function updateDebug({ player, oni, distance, distFromStart, oniSpeed, startPoint, playAreaPolygon, captureDistance, playerHeading, headingSource, direction }) {
   if (els.debugPanel.hasAttribute('hidden')) return;
   els.debugText.textContent = [
     `player: ${player.lat.toFixed(6)}, ${player.lon.toFixed(6)} (±${player.accuracy?.toFixed(1) ?? '?'}m)`,
@@ -227,7 +352,7 @@ export function updateDebug({ player, oni, distance, distFromStart, oniSpeed, st
     `heading: ${playerHeading != null ? playerHeading.toFixed(0) + '°' : '不明'} (${headingSource ?? '-'})`,
     `direction cue: ${direction ? `pulse×${direction.pulseCount}, ${direction.filterHz.toFixed(0)}Hz` : '-'}`,
   ].join('\n');
-  mapView.update({ player, oni, startPoint, playAreaRadius, captureDistance });
+  mapView.update({ player, oni, startPoint, playAreaPolygon, captureDistance, playerHeading });
 }
 
 export function showEnded({ reason, elapsedSec, message }) {

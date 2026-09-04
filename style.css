@@ -192,6 +192,28 @@ summary { cursor: pointer; color: var(--muted); }
 }
 #map-container canvas { display: block; width: 100%; height: auto; }
 
+.area-select {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.area-select-buttons { display: flex; gap: 16px; }
+.area-select-buttons .link-button { padding: 4px 0; }
+.area-select-buttons .link-button:disabled { opacity: 0.4; text-decoration: none; }
+
+#area-editor-map {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--panel);
+  min-height: 320px;
+  flex: 1;
+}
+.area-editor-buttons { display: flex; gap: 16px; }
+
 #screen-ended {
   align-items: center;
   justify-content: center;
