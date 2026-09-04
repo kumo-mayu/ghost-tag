@@ -42,6 +42,7 @@ export class MapView {
     this.ctx = null;
     this.leafletMap = null;
     this.markers = {};
+    this.mappedStart = null;
   }
 
   async setMode(mode) {
@@ -86,6 +87,7 @@ export class MapView {
     this.canvas = null;
     this.ctx = null;
     this.markers = {};
+    this.mappedStart = null;
   }
 
   _setupCanvas() {
@@ -185,15 +187,7 @@ export class MapView {
       // initial view from plain lat/lon math BEFORE adding any layers —
       // calling fitBounds(layer.getBounds()) here throws because the map
       // has no view yet.
-      const latDelta = playAreaRadius / 111320;
-      const lonDelta = playAreaRadius / (111320 * Math.cos((startPoint.lat * Math.PI) / 180) || 1);
-      this.leafletMap.fitBounds(
-        [
-          [startPoint.lat - latDelta, startPoint.lon - lonDelta],
-          [startPoint.lat + latDelta, startPoint.lon + lonDelta],
-        ],
-        { padding: [10, 10] }
-      );
+      this._fitPlayArea(startPoint, playAreaRadius);
 
       this.markers.start = L.circleMarker([startPoint.lat, startPoint.lon], {
         radius: 4,
@@ -217,10 +211,33 @@ export class MapView {
         fillColor: '#ff5252',
         fillOpacity: 0.9,
       }).addTo(this.leafletMap);
+      this.mappedStart = { ...startPoint };
     } else {
+      const startChanged =
+        !this.mappedStart ||
+        this.mappedStart.lat !== startPoint.lat ||
+        this.mappedStart.lon !== startPoint.lon;
+      this.markers.start.setLatLng([startPoint.lat, startPoint.lon]);
+      this.markers.playArea.setLatLng([startPoint.lat, startPoint.lon]);
       this.markers.player.setLatLng([player.lat, player.lon]);
       this.markers.oni.setLatLng([oni.lat, oni.lon]);
       this.markers.playArea.setRadius(playAreaRadius);
+      if (startChanged) {
+        this._fitPlayArea(startPoint, playAreaRadius);
+        this.mappedStart = { ...startPoint };
+      }
     }
+  }
+
+  _fitPlayArea(startPoint, playAreaRadius) {
+    const latDelta = playAreaRadius / 111320;
+    const lonDelta = playAreaRadius / (111320 * Math.cos((startPoint.lat * Math.PI) / 180) || 1);
+    this.leafletMap.fitBounds(
+      [
+        [startPoint.lat - latDelta, startPoint.lon - lonDelta],
+        [startPoint.lat + latDelta, startPoint.lon + lonDelta],
+      ],
+      { padding: [10, 10] }
+    );
   }
 }
