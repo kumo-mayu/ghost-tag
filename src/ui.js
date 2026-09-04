@@ -10,6 +10,10 @@ export function init(cb) {
   els.setupForm = document.getElementById('config-form');
   els.setupError = document.getElementById('setup-error');
   els.startBtn = document.getElementById('start-btn');
+  els.accuracyChoice = document.getElementById('accuracy-choice');
+  els.accuracyChoiceMessage = document.getElementById('accuracy-choice-message');
+  els.accuracyForceBtn = document.getElementById('accuracy-force-btn');
+  els.accuracyRetryBtn = document.getElementById('accuracy-retry-btn');
   els.audioTestBtn = document.getElementById('audio-test-btn');
   els.audioStatus = document.getElementById('audio-status');
   els.stopBtn = document.getElementById('stop-btn');
@@ -46,6 +50,8 @@ export function init(cb) {
   });
   els.stopBtn.addEventListener('click', () => callbacks.onStop());
   els.audioTestBtn.addEventListener('click', () => callbacks.onTestAudio());
+  els.accuracyForceBtn.addEventListener('click', () => callbacks.onForceAccuracy());
+  els.accuracyRetryBtn.addEventListener('click', () => callbacks.onRetryAccuracy());
   els.restartBtn.addEventListener('click', () => callbacks.onRestart());
   els.debugToggle.addEventListener('click', toggleDebug);
   els.logDownloadBtn.addEventListener('click', () => callbacks.onDownloadLog());
@@ -127,6 +133,18 @@ export function setAudioStatus(msg, isError = false) {
 export function setStartPending(pending) {
   els.startBtn.disabled = pending;
   els.startBtn.textContent = pending ? 'GPS取得中…' : 'START';
+}
+
+export function showAccuracyChoice(accuracy, threshold) {
+  els.startBtn.disabled = true;
+  els.startBtn.textContent = 'GPS精度不足';
+  els.accuracyChoiceMessage.textContent =
+    `GPS精度が±${accuracy.toFixed(1)}mです（目標±${threshold}m以内）。`;
+  els.accuracyChoice.removeAttribute('hidden');
+}
+
+export function hideAccuracyChoice() {
+  els.accuracyChoice.setAttribute('hidden', '');
 }
 
 function hideError() {

@@ -88,6 +88,11 @@
     <button type="button" id="audio-test-btn" class="link-button">音声をテスト</button>
     <p id="audio-status" class="hint" aria-live="polite"></p>
     <button type="submit" id="start-btn" class="big-button">START</button>
+    <div id="accuracy-choice" class="choice-panel" hidden>
+      <p id="accuracy-choice-message" class="warn"></p>
+      <button type="button" id="accuracy-force-btn" class="big-button">この精度で開始</button>
+      <button type="button" id="accuracy-retry-btn" class="link-button">GPSを再取得</button>
+    </div>
   </form>
   <p id="setup-error" class="error" hidden></p>
 

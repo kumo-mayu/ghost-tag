@@ -26,6 +26,7 @@ let compassVecY = null;
 let orientationEventType = null; // which event we're listening to, for cleanup
 let gpsWasLost = false;
 let lastOniTick = 0;
+let pendingLowAccuracyFix = null;
 
 const audio = new AudioEngine();
 
@@ -38,6 +39,19 @@ ui.init({
     } catch (err) {
       ui.setAudioStatus(err.message, true);
     }
+  },
+  onForceAccuracy: () => {
+    if (status !== GameStatus.STARTING || !pendingLowAccuracyFix) return;
+    const fix = pendingLowAccuracyFix;
+    pendingLowAccuracyFix = null;
+    ui.hideAccuracyChoice();
+    beginRunning(fix);
+  },
+  onRetryAccuracy: () => {
+    pendingLowAccuracyFix = null;
+    status = GameStatus.READY;
+    ui.hideAccuracyChoice();
+    ui.setStartPending(false);
   },
   onStop: () => endGame(EndReason.STOPPED),
   onRestart: () => {
@@ -59,6 +73,8 @@ async function startGame(formConfig) {
   status = GameStatus.STARTING;
   ui.setStartPending(true);
   config = formConfig;
+  pendingLowAccuracyFix = null;
+  ui.hideAccuracyChoice();
 
   // Invoke AudioContext.resume() before the first asynchronous permission/
   // location wait so mobile autoplay policy sees the START tap directly.
@@ -85,7 +101,10 @@ async function startGame(formConfig) {
 
   let fix;
   try {
-    fix = await gps.getCurrentPosition(20000);
+    fix = await gps.getAccuratePosition({
+      timeoutMs: 20000,
+      desiredAccuracyM: config.poorAccuracyThresholdM,
+    });
   } catch (err) {
     ui.showError(err.message);
     status = GameStatus.READY;
@@ -93,6 +112,16 @@ async function startGame(formConfig) {
     return;
   }
 
+  if (!fix.accuracyAcceptable) {
+    pendingLowAccuracyFix = fix;
+    ui.showAccuracyChoice(fix.accuracy, config.poorAccuracyThresholdM);
+    return;
+  }
+
+  beginRunning(fix);
+}
+
+function beginRunning(fix) {
   player = { lat: fix.lat, lon: fix.lon, accuracy: fix.accuracy };
   startPoint = { lat: fix.lat, lon: fix.lon };
 

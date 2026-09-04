@@ -30,6 +30,48 @@ export class GpsTracker {
     });
   }
 
+  // Collect fixes until the requested accuracy is reached. If time expires,
+  // return the best fix so the caller can offer an explicit manual override.
+  getAccuratePosition({ timeoutMs = 20000, desiredAccuracyM = 30 } = {}) {
+    return new Promise((resolve, reject) => {
+      let bestFix = null;
+      let watchId = null;
+      let settled = false;
+
+      const finish = (callback, value) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timerId);
+        if (watchId != null) navigator.geolocation.clearWatch(watchId);
+        callback(value);
+      };
+
+      const timerId = setTimeout(() => {
+        if (bestFix) {
+          finish(resolve, { ...bestFix, accuracyAcceptable: false });
+        } else {
+          finish(reject, new Error('位置情報の取得がタイムアウトしました'));
+        }
+      }, timeoutMs);
+
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          const fix = this._recordFix(pos);
+          if (!bestFix || fix.accuracy < bestFix.accuracy) bestFix = fix;
+          if (fix.accuracy <= desiredAccuracyM) {
+            finish(resolve, { ...fix, accuracyAcceptable: true });
+          }
+        },
+        (err) => {
+          const described = this._describeError(err);
+          if (err.code === 1) finish(reject, described);
+          else this.lastError = described;
+        },
+        { enableHighAccuracy: this.enableHighAccuracy, timeout: timeoutMs, maximumAge: 0 }
+      );
+    });
+  }
+
   start(onUpdate, onError) {
     this.startedAt = this.startedAt || performance.now();
     this.watchId = navigator.geolocation.watchPosition(
