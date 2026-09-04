@@ -443,3 +443,7 @@ document.addEventListener('visibilitychange', () => {
     logger.logEvent('background', { t: Math.round(performance.now() - startedAt) });
   }
 });
+
+window.addEventListener('pagehide', () => {
+  if (status === GameStatus.RUNNING) logger.flushActiveSession();
+});
