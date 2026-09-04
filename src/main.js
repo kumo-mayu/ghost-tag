@@ -18,6 +18,8 @@ let startedAt = 0;
 let outOfArea = false;
 let lastAreaWarnAt = 0;
 let wakeLock = null;
+let wakeLockActive = false;
+let wakeLockMessage = '';
 let playerHeading = null; // degrees, estimated from recent GPS movement
 let headingSource = null; // 'gps-native' | 'gps-computed' | 'compass' | null, for the debug panel
 let compassHeading = null; // degrees, smoothed device-orientation fallback
@@ -376,6 +378,8 @@ function updateRunningUI() {
     gpsLost: gpsHealth.lost,
     gpsMessage: gpsHealth.message,
     outOfArea,
+    wakeLockProblem: !wakeLockActive,
+    wakeLockMessage,
   });
 
   ui.updateDebug({
@@ -415,22 +419,59 @@ function endGame(reason, message) {
 }
 
 async function requestWakeLock() {
-  try {
-    if ('wakeLock' in navigator) {
-      wakeLock = await navigator.wakeLock.request('screen');
+  if (!('wakeLock' in navigator)) {
+    wakeLockActive = false;
+    wakeLockMessage = 'この端末は画面点灯維持に対応していません';
+    if (status === GameStatus.RUNNING) {
+      logger.logEvent('wakeLockUnsupported', { t: Math.round(performance.now() - startedAt) });
     }
+    return;
+  }
+  if (wakeLock && !wakeLock.released) {
+    wakeLockActive = true;
+    wakeLockMessage = '';
+    return;
+  }
+  try {
+    const sentinel = await navigator.wakeLock.request('screen');
+    if (status !== GameStatus.RUNNING) {
+      sentinel.release().catch(() => {});
+      return;
+    }
+    wakeLock = sentinel;
+    wakeLockActive = true;
+    wakeLockMessage = '';
+    logger.logEvent('wakeLockAcquired', { t: Math.round(performance.now() - startedAt) });
+    sentinel.addEventListener('release', () => {
+      if (wakeLock !== sentinel) return;
+      wakeLock = null;
+      wakeLockActive = false;
+      wakeLockMessage = '画面点灯維持が解除されました。画面を消さないでください';
+      if (status === GameStatus.RUNNING) {
+        logger.logEvent('wakeLockReleased', { t: Math.round(performance.now() - startedAt) });
+      }
+    });
   } catch (err) {
-    // Not fatal — the prototype still works with the screen turning off,
-    // just with degraded GPS/timer reliability while off (see CLAUDE.md).
+    wakeLockActive = false;
+    wakeLockMessage = '画面点灯維持を開始できません。画面を消さないでください';
+    if (status === GameStatus.RUNNING) {
+      logger.logEvent('wakeLockError', {
+        t: Math.round(performance.now() - startedAt),
+        message: err.message,
+      });
+    }
     console.warn('WakeLock取得失敗', err);
   }
 }
 
 function releaseWakeLock() {
   if (wakeLock) {
-    wakeLock.release().catch(() => {});
+    const sentinel = wakeLock;
     wakeLock = null;
+    sentinel.release().catch(() => {});
   }
+  wakeLockActive = false;
+  wakeLockMessage = '';
 }
 
 document.addEventListener('visibilitychange', () => {

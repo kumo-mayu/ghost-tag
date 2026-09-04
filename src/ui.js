@@ -29,6 +29,7 @@ export function init(cb) {
   els.areaWarning = document.getElementById('area-warning');
   els.gpsWarning = document.getElementById('gps-warning');
   els.accuracyWarning = document.getElementById('accuracy-warning');
+  els.wakeLockWarning = document.getElementById('wake-lock-warning');
   els.endedTitle = document.getElementById('ended-title');
   els.endedMessage = document.getElementById('ended-message');
   els.endedTime = document.getElementById('ended-time');
@@ -194,7 +195,7 @@ function formatTime(sec) {
   return `${m}:${s}`;
 }
 
-export function updateRunning({ elapsedSec, accuracy, gpsLost, gpsMessage, outOfArea, poorAccuracy }) {
+export function updateRunning({ elapsedSec, accuracy, gpsLost, gpsMessage, outOfArea, poorAccuracy, wakeLockProblem, wakeLockMessage }) {
   els.runningTimer.textContent = formatTime(elapsedSec);
   els.gpsAccuracy.textContent = accuracy != null ? accuracy.toFixed(1) : '--';
 
@@ -203,6 +204,13 @@ export function updateRunning({ elapsedSec, accuracy, gpsLost, gpsMessage, outOf
 
   if (poorAccuracy) els.accuracyWarning.removeAttribute('hidden');
   else els.accuracyWarning.setAttribute('hidden', '');
+
+  if (wakeLockProblem) {
+    els.wakeLockWarning.textContent = `⚠ ${wakeLockMessage || '画面の自動消灯を防止できません'}`;
+    els.wakeLockWarning.removeAttribute('hidden');
+  } else {
+    els.wakeLockWarning.setAttribute('hidden', '');
+  }
 
   if (gpsLost) setGpsWarning(`⚠ ${gpsMessage || 'GPS信号ロスト'}（ゲーム一時停止中）`);
   else clearGpsWarning();
