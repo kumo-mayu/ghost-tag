@@ -342,16 +342,17 @@ function updateRunningUI() {
 
   const dist = distanceMeters(player.lat, player.lon, oni.lat, oni.lon);
   const distFromStart = distanceMeters(startPoint.lat, startPoint.lon, player.lat, player.lon);
+  const gpsHealth = gps.getHealth();
 
   const wasOutOfArea = outOfArea;
-  outOfArea = distFromStart > config.playAreaRadius;
+  if (!gpsHealth.lost) outOfArea = distFromStart > config.playAreaRadius;
   const now = performance.now();
   if (outOfArea && !wasOutOfArea) {
     logger.logEvent('areaExit', { t: Math.round(now - startedAt) });
   } else if (!outOfArea && wasOutOfArea) {
     logger.logEvent('areaEnter', { t: Math.round(now - startedAt) });
   }
-  if (outOfArea && (!wasOutOfArea || now - lastAreaWarnAt > 3000)) {
+  if (!gpsHealth.lost && outOfArea && (!wasOutOfArea || now - lastAreaWarnAt > 3000)) {
     audio.playWarningTone();
     lastAreaWarnAt = now;
     if (config.areaExitGameOver) {
@@ -362,7 +363,6 @@ function updateRunningUI() {
 
   const poorAccuracy = player.accuracy != null && player.accuracy > config.poorAccuracyThresholdM;
 
-  const gpsHealth = gps.getHealth();
   if (gpsHealth.lost !== gpsWasLost) {
     logger.logEvent(gpsHealth.lost ? 'gpsLost' : 'gpsRecovered', {
       t: Math.round(now - startedAt),
