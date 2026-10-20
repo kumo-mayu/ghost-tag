@@ -21,8 +21,8 @@ for f in src/*.js; do node --check "$f" || echo "NG: $f"; done   # 構文。NG �
 
 ## 点検（プロジェクトだけの物。**公開リポジトリ**）
 
-- 実地テストのログ（`ghost-tag-log-*.json`）やそれを写した JSON が無いか（`git diff --cached --name-only` に `.json` が無いか）
-- 差分に実在の座標・遊んだ場所の名前が入っていないか。`git diff --cached | grep -nE '[0-9]{2,3}\.[0-9]{4,}'` で小数4桁以上の数を拾い、出たら緯度経度でないかを見る（コードの係数なら可）
+- 実地テストのログ（`ghost-tag-log-*.json`）やその中身を写した JSON が無いか（`git diff --cached --name-only` に `.claude/` 以外の `.json` が無いか）
+- 差分に実在の座標・遊んだ場所の名前が入っていないか。`git diff --cached | grep -nE '[0-9]{2,3}\.[0-9]{4,}'` で小数4桁以上の数を拾い、出たら緯度経度でないかを見る（コードの係数なら可。`src/areaEditor.js` の東京駅の座標は、地図の初期位置に使う公の目印なので既存の例外）
 - 保存したプレイエリア（スロット）の座標を、コード・試験・文書の例に使っていないか
 - 外部へ送る処理（`fetch`・`XMLHttpRequest`・`sendBeacon`・`WebSocket`）が足されていないか。`git diff --cached | grep -nE 'fetch\(|XMLHttpRequest|sendBeacon|WebSocket'`（Leaflet と地図タイルの読み込みは既存の例外）
 - 手元のフォルダの場所（ドライブ名やユーザー名を含む絶対パス）・IP アドレスが文書やコードに入っていないか
