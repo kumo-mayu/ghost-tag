@@ -1,5 +1,7 @@
 .DS_Store
 Thumbs.db
 node_modules/
-.claude/
+.claude/*
+!.claude/wrap-up.md
+!.claude/settings.json
 ghost-tag-log-*.json
