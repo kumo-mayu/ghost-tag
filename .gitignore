@@ -4,4 +4,5 @@ node_modules/
 .claude/*
 !.claude/wrap-up.md
 !.claude/settings.json
+!.claude/guard.json
 ghost-tag-log-*.json
